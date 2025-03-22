@@ -1,9 +1,7 @@
 from flask import Flask
 
 def configure_app(app):
-    app.config.from_mapping(
-        SECRET_KEY='dev',
-    )
+    app.config.from_object('app.instance.config')
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
