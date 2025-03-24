@@ -6,8 +6,50 @@ from flask import send_file
 import cv2
 import os
 import imghdr
+from PIL import Image
 
 # app = create_app()
+
+
+def is_valid_image(file):
+    """Validate the uploaded file is a valid image."""
+    # Check MIME type
+    if not file.content_type.startswith("image/"):
+        return False, "Uploaded file is not an image"
+
+    # Validate file extension
+    allowed_extensions = {"jpg", "jpeg", "png", "gif"}
+    if not (
+        "." in file.filename
+        and file.filename.rsplit(".", 1)[1].lower() in allowed_extensions
+    ):
+        return False, "Unsupported file extension"
+
+    # Validate file content using imghdr
+    file_content = file.read()
+    file.seek(0)  # Reset the file pointer after reading
+    if imghdr.what(None, h=file_content) not in allowed_extensions:
+        return False, "File content does not match an image type"
+
+    # Validate file content using Pillow
+    try:
+        Image.open(file).verify()
+    except Exception:
+        return False, "File content is not a valid image"
+
+    return True, None
+
+
+def is_valid_processed_image(path):
+    """Validate the processed image exists and is valid."""
+    if not os.path.exists(path):
+        return False, "Processed image does not exist"
+    try:
+        with Image.open(path) as img:
+            img.verify()
+    except Exception:
+        return False, "Processed image is not valid"
+    return True, None
 
 
 @app.route("/")
@@ -26,23 +68,10 @@ def upload():
     if file.filename == "":
         return jsonify({"error": "No selected file"}), 400
 
-    # Check if the uploaded file is an image based on its MIME type
-    if not file.content_type.startswith("image/"):
-        return jsonify({"error": "Uploaded file is not an image"}), 400
-
-    # Validate the file extension
-    allowed_extensions = {"jpg", "jpeg", "png", "gif"}
-    if not (
-        "." in file.filename
-        and file.filename.rsplit(".", 1)[1].lower() in allowed_extensions
-    ):
-        return jsonify({"error": "Unsupported file extension"}), 400
-
-    # Validate the file content using imghdr
-    file_content = file.read()
-    file.seek(0)  # Reset the file pointer after reading
-    if imghdr.what(None, h=file_content) not in allowed_extensions:
-        return jsonify({"error": "File content does not match an image type"}), 400
+    # Validate the uploaded file
+    is_valid, error_message = is_valid_image(file)
+    if not is_valid:
+        return jsonify({"error": error_message}), 400
 
     # Ensure the upload folder exists
     if not os.path.exists(app.config["UPLOAD_FOLDER"]):
@@ -66,6 +95,11 @@ def upload():
     )
     print(f"Processed image path: {processedImagePath}")
     cv2.imwrite(processedImagePath, imageCv, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
+
+    # Validate the processed image
+    is_valid, error_message = is_valid_processed_image(processedImagePath)
+    if not is_valid:
+        return jsonify({"error": error_message}), 500
 
     # Return success response with the compressed image
     return send_file(
