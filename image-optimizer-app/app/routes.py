@@ -5,6 +5,7 @@ from flask import jsonify
 from flask import send_file
 import cv2
 import os
+import imghdr
 
 # app = create_app()
 
@@ -25,6 +26,24 @@ def upload():
     if file.filename == "":
         return jsonify({"error": "No selected file"}), 400
 
+    # Check if the uploaded file is an image based on its MIME type
+    if not file.content_type.startswith("image/"):
+        return jsonify({"error": "Uploaded file is not an image"}), 400
+
+    # Validate the file extension
+    allowed_extensions = {"jpg", "jpeg", "png", "gif"}
+    if not (
+        "." in file.filename
+        and file.filename.rsplit(".", 1)[1].lower() in allowed_extensions
+    ):
+        return jsonify({"error": "Unsupported file extension"}), 400
+
+    # Validate the file content using imghdr
+    file_content = file.read()
+    file.seek(0)  # Reset the file pointer after reading
+    if imghdr.what(None, h=file_content) not in allowed_extensions:
+        return jsonify({"error": "File content does not match an image type"}), 400
+
     # Ensure the upload folder exists
     if not os.path.exists(app.config["UPLOAD_FOLDER"]):
         os.makedirs(app.config["UPLOAD_FOLDER"])
@@ -38,7 +57,7 @@ def upload():
     file.save(imagePath)
 
     # Process the image with OpenCV
-    image = cv2.imread(imagePath)
+    imageCv = cv2.imread(imagePath)
     # Reduce the quality of the image by changing the compression level
 
     processedImagePath = os.path.join(
@@ -46,7 +65,7 @@ def upload():
         "processed_" + str(int(os.path.getmtime(imagePath))) + "_" + file.filename,
     )
     print(f"Processed image path: {processedImagePath}")
-    cv2.imwrite(processedImagePath, image, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
+    cv2.imwrite(processedImagePath, imageCv, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
 
     # Return success response with the compressed image
     return send_file(
