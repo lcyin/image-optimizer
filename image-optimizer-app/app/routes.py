@@ -34,6 +34,7 @@ def is_valid_image(file):
     # Validate file content using Pillow
     try:
         Image.open(file).verify()
+        file.seek(0)  # Reset the file pointer after reading
     except Exception:
         return False, "File content is not a valid image"
 
