@@ -7,6 +7,11 @@ import cv2
 import os
 import imghdr
 from PIL import Image
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # app = create_app()
 
@@ -62,53 +67,93 @@ def home():
 # add route to upload image
 @app.route("/upload", methods=["POST"])
 def upload():
-    if "image" not in request.files:
-        return jsonify({"error": "No image file provided"}), 400
+    try:
+        if "image" not in request.files:
+            logger.error("No image file provided in the request")
+            return jsonify({"error": "No image file provided"}), 400
 
-    file = request.files["image"]
-    if file.filename == "":
-        return jsonify({"error": "No selected file"}), 400
+        file = request.files["image"]
+        if file.filename == "":
+            logger.error("No file selected for upload")
+            return jsonify({"error": "No selected file"}), 400
 
-    # Validate the uploaded file
-    is_valid, error_message = is_valid_image(file)
-    if not is_valid:
-        return jsonify({"error": error_message}), 400
+        # Validate the uploaded file
+        is_valid, error_message = is_valid_image(file)
+        if not is_valid:
+            logger.error(f"Image validation failed: {error_message}")
+            return jsonify({"error": error_message}), 400
 
-    # Ensure the upload folder exists
-    if not os.path.exists(app.config["UPLOAD_FOLDER"]):
-        os.makedirs(app.config["UPLOAD_FOLDER"])
+        # Ensure the upload folder exists
+        if not os.path.exists(app.config["UPLOAD_FOLDER"]):
+            try:
+                os.makedirs(app.config["UPLOAD_FOLDER"])
+                logger.info(f"Created upload folder: {app.config['UPLOAD_FOLDER']}")
+            except Exception as e:
+                logger.exception("Failed to create upload folder")
+                return jsonify({"error": "Failed to create upload folder"}), 500
 
-    # Get the quality parameter from the request, default to 10 if not provided
-    quality = request.form.get("quality", default=10, type=int)
-    print(f"Quality parameter received: {quality}")
+        # Get the quality parameter from the request
+        try:
+            quality = request.form.get("quality", default=10, type=int)
+            if not (0 <= quality <= 100):
+                logger.error(f"Invalid quality value: {quality}")
+                return jsonify({"error": "Quality must be between 0 and 100"}), 400
+            logger.info(f"Quality parameter received: {quality}")
+        except Exception as e:
+            logger.exception("Failed to parse quality parameter")
+            return jsonify({"error": "Invalid quality parameter"}), 400
 
-    # Save the image to local storage
-    imagePath = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
-    file.save(imagePath)
+        # Save the image to local storage
+        try:
+            imagePath = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
+            file.save(imagePath)
+            logger.info(f"Image saved to: {imagePath}")
+        except Exception as e:
+            logger.exception("Failed to save the uploaded image")
+            return jsonify({"error": "Failed to save the uploaded image"}), 500
 
-    # Process the image with OpenCV
-    imageCv = cv2.imread(imagePath)
-    # Reduce the quality of the image by changing the compression level
+        # Process the image with OpenCV
+        try:
+            imageCv = cv2.imread(imagePath)
+            if imageCv is None:
+                logger.error(f"Failed to read image: {imagePath}")
+                return jsonify({"error": "Failed to process the uploaded image"}), 400
 
-    processedImagePath = os.path.join(
-        app.config["UPLOAD_FOLDER"],
-        "processed_" + str(int(os.path.getmtime(imagePath))) + "_" + file.filename,
-    )
-    print(f"Processed image path: {processedImagePath}")
-    cv2.imwrite(processedImagePath, imageCv, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
+            processedImagePath = os.path.join(
+                app.config["UPLOAD_FOLDER"],
+                "processed_"
+                + str(int(os.path.getmtime(imagePath)))
+                + "_"
+                + file.filename,
+            )
+            logger.info(f"Processing image, output path: {processedImagePath}")
+            success = cv2.imwrite(
+                processedImagePath, imageCv, [int(cv2.IMWRITE_JPEG_QUALITY), quality]
+            )
+            if not success:
+                logger.error(f"Failed to write processed image: {processedImagePath}")
+                return jsonify({"error": "Failed to save the processed image"}), 500
+        except Exception as e:
+            logger.exception("Failed to process the image")
+            return jsonify({"error": "Failed to process the image"}), 500
 
-    # Validate the processed image
-    is_valid, error_message = is_valid_processed_image(processedImagePath)
-    if not is_valid:
-        return jsonify({"error": error_message}), 500
+        # Validate the processed image
+        is_valid, error_message = is_valid_processed_image(processedImagePath)
+        if not is_valid:
+            logger.error(f"Processed image validation failed: {error_message}")
+            return jsonify({"error": error_message}), 500
 
-    # Return success response with the compressed image
-    return send_file(
-        processedImagePath,
-        mimetype="image/jpeg",
-        as_attachment=True,
-        download_name=f"compressed_{file.filename}",
-    )
+        # Return success response with the compressed image
+        logger.info(f"Image processed successfully: {processedImagePath}")
+        return send_file(
+            processedImagePath,
+            mimetype="image/jpeg",
+            as_attachment=True,
+            download_name=f"compressed_{file.filename}",
+        )
+    except Exception as e:
+        logger.exception("An unexpected error occurred during the upload process")
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
 
 # add route to see all registered routes
