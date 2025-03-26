@@ -94,10 +94,18 @@ def upload():
 
         # Get the quality parameter from the request
         try:
-            quality = request.form.get("quality", default=10, type=int)
-            if not (0 <= quality <= 100):
+            if "quality" not in request.form:
+                logger.error("Quality parameter not provided in the request")
+                return jsonify({"error": "Quality parameter is required"}), 400
+
+            quality = request.form.get("quality", type=int)
+            if quality is None or not (0 <= quality <= 100):
                 logger.error(f"Invalid quality value: {quality}")
-                return jsonify({"error": "Quality must be between 0 and 100"}), 400
+                return (
+                    jsonify({"error": "Quality must be an integer between 0 and 100"}),
+                    400,
+                )
+
             logger.info(f"Quality parameter received: {quality}")
         except Exception as e:
             logger.exception("Failed to parse quality parameter")
