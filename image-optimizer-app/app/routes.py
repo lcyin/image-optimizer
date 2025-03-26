@@ -112,30 +112,35 @@ def upload():
             logger.exception("Failed to save the uploaded image")
             return jsonify({"error": "Failed to save the uploaded image"}), 500
 
-        # Process the image with OpenCV
-        try:
+        # Process the image
+        processedImagePath = os.path.join(
+            app.config["UPLOAD_FOLDER"],
+            "processed_" + str(int(os.path.getmtime(imagePath))) + "_" + file.filename,
+        )
+
+        if file.filename.lower().endswith(".gif"):
+            # Handle GIF files using Pillow
+            logger.info(f"Processing GIF image: {imagePath}")
+            try:
+                with Image.open(imagePath) as img:
+                    img.save(processedImagePath, format="GIF", optimize=True)
+            except Exception as e:
+                logger.exception("Failed to process GIF image")
+                return jsonify({"error": "Failed to process GIF image"}), 500
+        else:
+            # Handle other image formats using OpenCV
+            logger.info(f"Processing image, output path: {processedImagePath}")
             imageCv = cv2.imread(imagePath)
             if imageCv is None:
                 logger.error(f"Failed to read image: {imagePath}")
                 return jsonify({"error": "Failed to process the uploaded image"}), 400
 
-            processedImagePath = os.path.join(
-                app.config["UPLOAD_FOLDER"],
-                "processed_"
-                + str(int(os.path.getmtime(imagePath)))
-                + "_"
-                + file.filename,
-            )
-            logger.info(f"Processing image, output path: {processedImagePath}")
             success = cv2.imwrite(
                 processedImagePath, imageCv, [int(cv2.IMWRITE_JPEG_QUALITY), quality]
             )
             if not success:
                 logger.error(f"Failed to write processed image: {processedImagePath}")
                 return jsonify({"error": "Failed to save the processed image"}), 500
-        except Exception as e:
-            logger.exception("Failed to process the image")
-            return jsonify({"error": "Failed to process the image"}), 500
 
         # Validate the processed image
         is_valid, error_message = is_valid_processed_image(processedImagePath)
@@ -147,7 +152,9 @@ def upload():
         logger.info(f"Image processed successfully: {processedImagePath}")
         return send_file(
             processedImagePath,
-            mimetype="image/jpeg",
+            mimetype=(
+                "image/gif" if file.filename.lower().endswith(".gif") else "image/jpeg"
+            ),
             as_attachment=True,
             download_name=f"compressed_{file.filename}",
         )
