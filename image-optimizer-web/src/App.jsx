@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
 
 function App() {
@@ -72,7 +70,7 @@ function App() {
     <div className="app-container">
       <header className="app-header">
         <h1>Image Optimizer</h1>
-        <p>Optimize your images with our simple tool</p>
+        <p>Optimize your images with our simple tool. Reduce file size while maintaining quality.</p>
       </header>
 
       <form onSubmit={handleSubmit}>
@@ -81,10 +79,24 @@ function App() {
             <h2 data-number="1">Select Image</h2>
             <div className="upload-section">
               <label htmlFor="image-upload" className="upload-label">
-                {preview ?
-                  <img src={preview} alt="Preview" className="image-preview" /> :
-                  <div className="upload-placeholder">Click to select an image</div>
-                }
+                {preview ? (
+                  <div className="preview-container">
+                    <img src={preview} alt="Preview" className="image-preview" />
+                    <div className="preview-overlay">
+                      <span>Click to change image</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="upload-placeholder">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <span>Click to select an image</span>
+                    <span className="upload-hint">Supports JPG, PNG, and WebP</span>
+                  </div>
+                )}
               </label>
               <input
                 id="image-upload"
@@ -99,9 +111,11 @@ function App() {
               <div className="file-info">
                 <div>
                   <p><strong>File:</strong> {selectedFile.name}</p>
+                  <p><strong>Type:</strong> {selectedFile.type}</p>
                 </div>
                 <div>
                   <p><strong>Size:</strong> {Math.round(selectedFile.size / 1024)} KB</p>
+                  <p><strong>Dimensions:</strong> {preview ? `${preview.width}x${preview.height}` : 'Loading...'}</p>
                 </div>
               </div>
             )}
@@ -112,7 +126,7 @@ function App() {
             <div className="quality-control">
               <label htmlFor="quality-slider" className="quality-label">
                 Quality
-                <span>{quality}%</span>
+                <span className="quality-value">{quality}%</span>
               </label>
               <input
                 id="quality-slider"
@@ -124,8 +138,8 @@ function App() {
                 className="quality-slider"
               />
               <div className="quality-labels">
-                <span>Lower file size</span>
-                <span>Higher quality</span>
+                <span>Smaller file size</span>
+                <span>Better quality</span>
               </div>
             </div>
           </div>
@@ -137,13 +151,33 @@ function App() {
               className="submit-button"
               disabled={isLoading || !selectedFile}
             >
-              {isLoading ? 'Processing...' : 'Upload and Optimize'}
+              {isLoading ? (
+                <span className="loading-state">
+                  <svg className="loading-spinner" viewBox="0 0 24 24">
+                    <circle className="loading-circle" cx="12" cy="12" r="10" fill="none" strokeWidth="3" />
+                  </svg>
+                  Processing...
+                </span>
+              ) : (
+                'Upload and Optimize'
+              )}
             </button>
           </div>
 
           {message && (
             <div className="grid-section message-area">
               <div className={`message ${message.includes('success') ? 'success' : 'error'}`}>
+                {message.includes('success') ? (
+                  <svg className="message-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                ) : (
+                  <svg className="message-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                )}
                 {message}
               </div>
             </div>
@@ -159,6 +193,7 @@ function App() {
                     <img src={preview} alt="Original" className="result-image" />
                     <div className="file-info">
                       <p><strong>Size:</strong> {Math.round(selectedFile.size / 1024)} KB</p>
+                      <p><strong>Quality:</strong> 100%</p>
                     </div>
                   </div>
                   <div className="image-card">
@@ -166,8 +201,14 @@ function App() {
                     <img src={optimizedImage} alt="Optimized" className="result-image" />
                     <div className="file-info">
                       <p><strong>Size:</strong> {Math.round(optimizedSize / 1024)} KB</p>
-                      <p><strong>Reduction:</strong> {Math.round((1 - optimizedSize / selectedFile.size) * 100)}%</p>
+                      <p><strong>Quality:</strong> {quality}%</p>
+                      <p className="reduction-info">
+                        <strong>Reduction:</strong> {Math.round((1 - optimizedSize / selectedFile.size) * 100)}%
+                      </p>
                     </div>
+                    <a href={optimizedImage} download="optimized-image" className="download-button">
+                      Download Optimized Image
+                    </a>
                   </div>
                 </div>
               </div>
