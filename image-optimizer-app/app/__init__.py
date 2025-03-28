@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_cors import CORS
 
 def configure_app(app):
     app.config.from_object('app.instance.config')
@@ -16,5 +17,7 @@ def create_app():
     
     with app.app_context():
         from . import routes
+
+    CORS(app)
 
     return app
