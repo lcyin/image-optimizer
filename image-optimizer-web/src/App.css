@@ -379,3 +379,54 @@ body {
     transform: translateY(0);
   }
 }
+
+/* Comparison section */
+.comparison-container {
+  width: 100%;
+  margin-top: var(--spacing-lg);
+}
+
+.image-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+  width: 100%;
+}
+
+.image-card {
+  background-color: var(--card-background);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-md);
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.image-card h3 {
+  color: var(--text-color);
+  font-size: 1.1rem;
+  margin-bottom: var(--spacing-sm);
+}
+
+.result-image {
+  width: 100%;
+  height: auto;
+  max-height: 300px;
+  object-fit: contain;
+  border-radius: var(--border-radius);
+}
+
+.image-card .file-info {
+  background-color: rgba(79, 70, 229, 0.05);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-md);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+  .image-comparison {
+    grid-template-columns: 1fr;
+  }
+}

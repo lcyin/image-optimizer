@@ -6,6 +6,8 @@ import './App.css'
 function App() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [optimizedImage, setOptimizedImage] = useState(null);
+  const [optimizedSize, setOptimizedSize] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [quality, setQuality] = useState(100);
@@ -50,11 +52,13 @@ function App() {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setMessage('Image uploaded successfully!');
-        // Handle successful response here
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+        setOptimizedImage(imageUrl);
+        setOptimizedSize(blob.size);
+        setMessage('Image optimized successfully!');
       } else {
-        setMessage('Error uploading image. Please try again.');
+        setMessage('Error optimizing image. Please try again.');
       }
     } catch (error) {
       console.error('Error:', error);
@@ -141,6 +145,31 @@ function App() {
             <div className="grid-section message-area">
               <div className={`message ${message.includes('success') ? 'success' : 'error'}`}>
                 {message}
+              </div>
+            </div>
+          )}
+
+          {optimizedImage && (
+            <div className="grid-section result-area">
+              <h2>Comparison</h2>
+              <div className="comparison-container">
+                <div className="image-comparison">
+                  <div className="image-card">
+                    <h3>Original Image</h3>
+                    <img src={preview} alt="Original" className="result-image" />
+                    <div className="file-info">
+                      <p><strong>Size:</strong> {Math.round(selectedFile.size / 1024)} KB</p>
+                    </div>
+                  </div>
+                  <div className="image-card">
+                    <h3>Optimized Image</h3>
+                    <img src={optimizedImage} alt="Optimized" className="result-image" />
+                    <div className="file-info">
+                      <p><strong>Size:</strong> {Math.round(optimizedSize / 1024)} KB</p>
+                      <p><strong>Reduction:</strong> {Math.round((1 - optimizedSize / selectedFile.size) * 100)}%</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
